@@ -1,8 +1,10 @@
+CREATE SCHEMA matinal_operacional;
 
-CREATE TYPE status_nf AS ENUM ('pendente', 'aprovado', 'reprovado');
 
-CREATE TABLE pj (
-    id_surr       SERIAL        PRIMARY KEY,
+CREATE TYPE matinal_operacional.status_nf AS ENUM ('PENDENTE', 'APROVADO', 'REPROVADO');
+
+CREATE TABLE matinal_operacional.pj (
+    id_pj         SERIAL        PRIMARY KEY,
     cnpj          VARCHAR(18)   NOT NULL UNIQUE,
     razao_social  VARCHAR(150)  NOT NULL,
     nome_fantasia VARCHAR(100),
@@ -12,196 +14,243 @@ CREATE TABLE pj (
 );
 
 
-CREATE TABLE endereco (
+CREATE TABLE matinal_operacional.endereco (
     id_endereco  SERIAL        PRIMARY KEY,
     cidade       VARCHAR(100),
     estado       VARCHAR(50),
     pais         VARCHAR(50),
-    complemento  VARCHAR(200)
+    UNIQUE (cidade, estado, pais)
 );
 
 
-CREATE TABLE pj_endereco (
+CREATE TABLE matinal_operacional.pj_endereco (
     id_pj        INT  NOT NULL,
     id_endereco  INT  NOT NULL,
+    complemento  VARCHAR(200),
     PRIMARY KEY (id_pj, id_endereco),
     CONSTRAINT fk_pje_pj
-        FOREIGN KEY (id_pj) REFERENCES pj(id_surr),
+        FOREIGN KEY (id_pj) REFERENCES matinal_operacional.pj(id_pj)
+                ON DELETE CASCADE
+        ON UPDATE CASCADE,
     CONSTRAINT fk_pje_endereco
-        FOREIGN KEY (id_endereco) REFERENCES endereco(id_endereco)
+        FOREIGN KEY (id_endereco) REFERENCES matinal_operacional.endereco(id_endereco)
+                ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-CREATE TABLE transportadora (
-    id_surr  INT  PRIMARY KEY,
+CREATE TABLE matinal_operacional.transportadora (
+    id_transportadora  INT  PRIMARY KEY,
+    tel_contato  VARCHAR (11),
     CONSTRAINT fk_transportadora_pj
-        FOREIGN KEY (id_surr) REFERENCES pj(id_surr)
+        FOREIGN KEY (id_transportadora) REFERENCES matinal_operacional.pj(id_pj)
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
-
-CREATE TABLE fabricante (
-    id_surr  INT  PRIMARY KEY,
+CREATE TABLE matinal_operacional.fabricante (
+    id_fabricante INT  PRIMARY KEY,
+    tecnico_responsavel VARCHAR(127),
     CONSTRAINT fk_fabricante_pj
-        FOREIGN KEY (id_surr) REFERENCES pj(id_surr)
+        FOREIGN KEY (id_fabricante) REFERENCES matinal_operacional.pj(id_pj)
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-CREATE TABLE fornecedor (
-    id_surr  INT  PRIMARY KEY,
+CREATE TABLE matinal_operacional.fornecedor (
+    id_fornecedor  INT  PRIMARY KEY,
+    vendedor_responsavel VARCHAR(127),
     CONSTRAINT fk_fornecedor_pj
-        FOREIGN KEY (id_surr) REFERENCES pj(id_surr)
+        FOREIGN KEY (id_fornecedor) REFERENCES matinal_operacional.pj(id_pj)
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-CREATE TABLE nf (
-    pk_nf         VARCHAR(44)   PRIMARY KEY,
-    nfe           VARCHAR(50)   UNIQUE, 
-    item          VARCHAR(100),
+CREATE TABLE matinal_operacional.nf (
+    id_nfe         SERIAL PRIMARY KEY,
+    nfe            VARCHAR(50) NOT NULL,
+    nro_serie_nfe  VARCHAR(4) NOT NULL,
     data_emissao  DATE          NOT NULL,
     qtd_itens     INT,
     data_chegada  DATE,
     exp_chegada   DATE,
-    status        status_nf     NOT NULL DEFAULT 'pendente',
-    valor_total   NUMERIC(12,2)
+    status        matinal_operacional.status_nf     NOT NULL DEFAULT 'PENDENTE',
+    valor_total   NUMERIC(12,2),
+    UNIQUE (nfe, nro_serie_nfe)
 );
 
 
-CREATE TABLE entrega (
-    renavam             VARCHAR(11)  PRIMARY KEY,
-    pk_nf               VARCHAR(44)  NOT NULL,
-    id_transportadora   INT          NOT NULL,
+CREATE TABLE matinal_operacional.entrega (
+    renavam             VARCHAR(11),
+    id_nfe               INT NOT NULL,
+    id_transportadora   INT NOT NULL,
     cnh                 VARCHAR(11),
     placa               VARCHAR(8),
+    PRIMARY KEY (renavam, id_nfe, id_transportadora),
     CONSTRAINT fk_entrega_nf
-        FOREIGN KEY (pk_nf) REFERENCES nf(pk_nf),
+        FOREIGN KEY (id_nfe) REFERENCES matinal_operacional.nf(id_nfe)
+                ON DELETE CASCADE
+        ON UPDATE CASCADE,
     CONSTRAINT fk_entrega_transportadora
-        FOREIGN KEY (id_transportadora) REFERENCES transportadora(id_surr)
+        FOREIGN KEY (id_transportadora) REFERENCES matinal_operacional.transportadora(id_transportadora)
+                ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-CREATE TABLE pallet (
-    nro            SERIAL       PRIMARY KEY, 
-    pk_nf          VARCHAR(44)  NOT NULL,
+CREATE TABLE matinal_operacional.pallet (
+    nro            SERIAL,
+    id_nfe         INT  NOT NULL,
     id_fornecedor  INT          NOT NULL,
     alocado        BOOLEAN      DEFAULT FALSE,
+    PRIMARY KEY (nro, id_nfe, id_fornecedor),
     CONSTRAINT fk_pallet_nf
-        FOREIGN KEY (pk_nf) REFERENCES nf(pk_nf),
+        FOREIGN KEY (id_nfe) REFERENCES matinal_operacional.nf(id_nfe)
+                ON DELETE CASCADE
+        ON UPDATE CASCADE,
     CONSTRAINT fk_pallet_fornecedor
-        FOREIGN KEY (id_fornecedor) REFERENCES fornecedor(id_surr)
+        FOREIGN KEY (id_fornecedor) REFERENCES matinal_operacional.fornecedor(id_fornecedor)
+                ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-CREATE TABLE avaria (
+CREATE TABLE matinal_operacional.avaria (
     nro_pallet  INT          NOT NULL,
+    id_nfe         INT  NOT NULL,
+    id_fornecedor  INT          NOT NULL,
     nro         SERIAL,
-    qtd         INT,
-    tipo        VARCHAR(50),
+    qtd         INT NOT NULL,
+    tipo        VARCHAR(50) NOT NULL,
     descricao   TEXT,
-    PRIMARY KEY (nro_pallet, nro),
+    PRIMARY KEY (nro_pallet, id_nfe, id_fornecedor, nro),
     CONSTRAINT fk_avaria_pallet
-        FOREIGN KEY (nro_pallet) REFERENCES pallet(nro)
+        FOREIGN KEY (nro, id_nfe, id_fornecedor) REFERENCES matinal_operacional.pallet(nro, id_nfe, id_fornecedor)
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-CREATE TABLE insumo (
-    id_surr     SERIAL        PRIMARY KEY,  -- surrogate
+CREATE TABLE matinal_operacional.insumo (
+    id_insumo     SERIAL        PRIMARY KEY,  -- surrogate
     nome        VARCHAR(100)  NOT NULL,
     descricao   TEXT,
-    unidade     VARCHAR(20),
+    unidade     VARCHAR(20) NOT NULL,
     qtd_padrao  NUMERIC(10,3),
     emb_padrao  VARCHAR(50)
 );
 
 
-CREATE TABLE fornecedor_insumo (
+CREATE TABLE matinal_operacional.fornecedor_insumo (
     id_fornecedor  INT   NOT NULL,
     id_insumo      INT   NOT NULL,
-    data_inif      DATE,
+    data_inif      DATE NOT NULL,
     data_fim       DATE,
     PRIMARY KEY (id_fornecedor, id_insumo),
     CONSTRAINT fk_fi_fornecedor
-        FOREIGN KEY (id_fornecedor) REFERENCES fornecedor(id_surr),
+        FOREIGN KEY (id_fornecedor) REFERENCES matinal_operacional.fornecedor(id_fornecedor)
+                ON DELETE CASCADE
+        ON UPDATE CASCADE,
     CONSTRAINT fk_fi_insumo
-        FOREIGN KEY (id_insumo) REFERENCES insumo(id_surr)
+        FOREIGN KEY (id_insumo) REFERENCES matinal_operacional.insumo(id_insumo)
+                ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-CREATE TABLE item_nf (
-    linha              SERIAL         PRIMARY KEY, 
-    pk_nf              VARCHAR(44)    NOT NULL,
-    id_insumo          INT            NOT NULL,
-    qtd                NUMERIC(10,3),
-    valor_unitario     NUMERIC(12,2),
-    valor_total        NUMERIC(12,2)
-                           GENERATED ALWAYS AS (qtd * valor_unitario) STORED,
-    und_medida         VARCHAR(20),
-    NCM_SH             VARCHAR(10), 
-    O_CST              VARCHAR(5),   
-    CFOP               VARCHAR(5),   
-    aliquota_icms      NUMERIC(5,2),
-    base_calculo_icms  NUMERIC(12,2),
-    valor_icms         NUMERIC(12,2),
-    aliquota_ipi       NUMERIC(5,2),
-    CONSTRAINT fk_itnf_nf
-        FOREIGN KEY (pk_nf) REFERENCES nf(pk_nf),
-    CONSTRAINT fk_itnf_insumo
-        FOREIGN KEY (id_insumo) REFERENCES insumo(id_surr)
-);
 
-
-CREATE TABLE laudo (
+CREATE TABLE matinal_operacional.laudo (
     id_fabricante  INT  NOT NULL,
     nro_laudo      INT  NOT NULL,
     PRIMARY KEY (id_fabricante, nro_laudo),
     CONSTRAINT fk_laudo_fabricante
-        FOREIGN KEY (id_fabricante) REFERENCES fabricante(id_surr)
+        FOREIGN KEY (id_fabricante) REFERENCES matinal_operacional.fabricante(id_fabricante)
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-CREATE TABLE lote (
+CREATE TABLE matinal_operacional.lote (
     id_fabricante   INT          NOT NULL,
     nro_laudo       INT          NOT NULL,
-    id_lote         SERIAL,          
-    sif             VARCHAR(20),
-    data_fabricacao DATE,
-    data_validade   DATE,
-    PRIMARY KEY (id_fabricante, nro_laudo, id_lote),
+    nro_lote         SERIAL,
+    sif             VARCHAR(20) NOT NULL,
+    data_fabricacao DATE NOT NULL,
+    data_validade   DATE NOT NULL,
+    PRIMARY KEY (id_fabricante, nro_laudo, nro_lote),
     CONSTRAINT fk_lote_laudo
         FOREIGN KEY (id_fabricante, nro_laudo)
-            REFERENCES laudo(id_fabricante, nro_laudo)
+            REFERENCES matinal_operacional.laudo(id_fabricante, nro_laudo)
         ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-CREATE TABLE item_nf_lote (
-    linha          INT  NOT NULL,
+CREATE TABLE matinal_operacional.item_nf (
+    linha              SERIAL,
+    id_nfe             INT NOT NULL,
+    id_insumo          INT NOT NULL,
+    qtd                NUMERIC(10,3) NOT NULL,
+    valor_unitario     NUMERIC(12,2) NOT NULL,
+    valor_total        NUMERIC(12,2)
+                           GENERATED ALWAYS AS (qtd * valor_unitario) STORED,
+    und_medida         VARCHAR(20),
+    NCM_SH             VARCHAR(10),
+    O_CST              VARCHAR(5),
+    CFOP               VARCHAR(5),
+    aliquota_icms      NUMERIC(5,2),
+    base_calculo_icms  NUMERIC(12,2),
+    valor_icms         NUMERIC(12,2),
+    aliquota_ipi       NUMERIC(5,2),
+    PRIMARY KEY (linha, id_nfe, id_insumo),
+    CONSTRAINT fk_itnf_nf
+        FOREIGN KEY (id_nfe) REFERENCES matinal_operacional.nf(id_nfe)
+                ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_itnf_insumo
+        FOREIGN KEY (id_insumo) REFERENCES matinal_operacional.insumo(id_insumo)
+                ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+
+
+CREATE TABLE matinal_operacional.item_lote (
+    linha              SERIAL,
+    id_nfe             INT NOT NULL,
+    id_insumo          INT NOT NULL,
     id_fabricante  INT  NOT NULL,
     nro_laudo      INT  NOT NULL,
-    id_lote        INT  NOT NULL,
-    PRIMARY KEY (linha, id_fabricante, nro_laudo, id_lote),
+    nro_lote        INT  NOT NULL,
+    PRIMARY KEY (linha, id_nfe, id_insumo, id_fabricante, nro_laudo, nro_lote),
     CONSTRAINT fk_inl_item_nf
-        FOREIGN KEY (linha) REFERENCES item_nf(linha),
+        FOREIGN KEY (linha, id_nfe, id_insumo) REFERENCES matinal_operacional.item_nf(linha, id_nfe, id_insumo)
+                ON DELETE CASCADE
+        ON UPDATE CASCADE,
     CONSTRAINT fk_inl_lote
-        FOREIGN KEY (id_fabricante, nro_laudo, id_lote)
-            REFERENCES lote(id_fabricante, nro_laudo, id_lote)
+        FOREIGN KEY (id_fabricante, nro_laudo, nro_lote)
+            REFERENCES matinal_operacional.lote(id_fabricante, nro_laudo, nro_lote)
+                    ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
-CREATE TABLE fornecedor_laudo (
+CREATE TABLE matinal_operacional.laudo_fornecedor (
     id_fornecedor  INT  NOT NULL,
     id_fabricante  INT  NOT NULL,
     nro_laudo      INT  NOT NULL,
     PRIMARY KEY (id_fornecedor, id_fabricante, nro_laudo),
     CONSTRAINT fk_fl_fornecedor
-        FOREIGN KEY (id_fornecedor) REFERENCES fornecedor(id_surr),
+        FOREIGN KEY (id_fornecedor) REFERENCES matinal_operacional.fornecedor(id_fornecedor)
+                ON DELETE CASCADE
+        ON UPDATE CASCADE,
     CONSTRAINT fk_fl_laudo
         FOREIGN KEY (id_fabricante, nro_laudo)
-            REFERENCES laudo(id_fabricante, nro_laudo)
+            REFERENCES matinal_operacional.laudo(id_fabricante, nro_laudo)
+                    ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
