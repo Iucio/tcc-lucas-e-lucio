@@ -86,10 +86,12 @@ CREATE TABLE ordem_producao (
     CONSTRAINT chk_op_periodo CHECK (fim IS NULL OR inicio IS NULL OR fim >= inicio)
 );
 
+-- DEVERIA SER HASH
 CREATE INDEX idx_op_status ON ordem_producao(status);
+-- DEVERIA SER HASH
 CREATE INDEX idx_op_produto ON ordem_producao(id_produto);
 
-CREATE TABLE ordem_producao_insumo (
+CREATE TABLE execucao_ordem_producao_insumo (
     id_op            INTEGER NOT NULL REFERENCES ordem_producao(id_op) ON DELETE CASCADE,
     id_insumos       INTEGER NOT NULL REFERENCES insumos(id_insumos),
     qtd_consumidas   NUMERIC(14,4) NOT NULL DEFAULT 0,
@@ -98,7 +100,7 @@ CREATE TABLE ordem_producao_insumo (
 );
 
 
-CREATE TABLE ordem_producao_item_nfe (
+CREATE TABLE execucao_ordem_producao_item_nfe (
     id_op            INTEGER NOT NULL REFERENCES ordem_producao(id_op) ON DELETE CASCADE,
     id_item_nfe      INTEGER NOT NULL REFERENCES item_nfe(id_item_nfe),
     qtd_consumidos   NUMERIC(14,4) NOT NULL DEFAULT 0,
@@ -114,11 +116,11 @@ CREATE TABLE sessao (
     hora_programada_inicio     TIMESTAMP,
     hora_programada_fim        TIMESTAMP,
     hora_real_inicio           TIMESTAMP,
-    hora_real_fim               TIMESTAMP,
+    hora_real_fim              TIMESTAMP,
     motivo_atraso              VARCHAR(200),
     atraso_minutos             INTEGER,
     total_saches_produzidos    INTEGER NOT NULL DEFAULT 0,
-    total_perdas               INTEGER NOT NULL DEFAULT 0
+    total_perdas_varredura     INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX idx_sessao_op ON sessao(id_op);
@@ -138,11 +140,11 @@ CREATE TABLE parada (
 
 
 CREATE TABLE pallet_acabado (
-    id_pallet_qr               VARCHAR(50) PRIMARY KEY,
+    id_pallet                  UUID PRIMARY KEY,
     id_sessao                  INTEGER NOT NULL REFERENCES sessao(id_sessao),
-    id_posicao                 INTEGER REFERENCES posicao_estoque(id_posicao),
+    id_posicao_estoque         INTEGER REFERENCES posicao_estoque(id_posicao),
     id_usuario_paletizador     INTEGER REFERENCES usuario(id_usuario),
-    etiqueta_qr                VARCHAR(80),
+    etiqueta_qr                VARCHAR(80) UNIQUE,
     status                     status_pallet NOT NULL DEFAULT 'em_espera',
     total_kg                   NUMERIC(14,3) NOT NULL DEFAULT 0,
     qtd_items                  INTEGER NOT NULL DEFAULT 0,
@@ -150,30 +152,35 @@ CREATE TABLE pallet_acabado (
     data_hora_fim               TIMESTAMP,
     data_hr_conf               TIMESTAMP,
     data_inspecao              TIMESTAMP,
-    total_kg_parcial           NUMERIC(14,3) NOT NULL DEFAULT 0,
-    qtd_fardos_parcial_total   INTEGER NOT NULL DEFAULT 0
+    total_kg_parcial           NUMERIC(14,3) NOT NULL DEFAULT 0
 );
 
 CREATE INDEX idx_pallet_sessao ON pallet_acabado(id_sessao);
 
 CREATE TABLE pallet_parcial_acabado (
-    id_pallet_qr        VARCHAR(50) NOT NULL REFERENCES pallet_acabado(id_pallet_qr) ON DELETE CASCADE,
+    id_pallet           UUID NOT NULL REFERENCES pallet_acabado(id_pallet_qr) ON DELETE CASCADE,
     nro                 INTEGER NOT NULL,
     total_kg            NUMERIC(14,3) NOT NULL DEFAULT 0,
     data_inspecao       TIMESTAMP,
     qtd_fardos_parcial  INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (id_pallet_qr, nro)
+    PRIMARY KEY (id_pallet, nro)
 );
 
 
-CREATE TABLE encartuchamento (
-    id_encartuchamento       SERIAL PRIMARY KEY,
-    id_pallet_qr             VARCHAR(50) NOT NULL REFERENCES pallet_acabado(id_pallet_qr),
+CREATE TABLE pallet_final_encartuchado (
+    id_pallet_encartuchado   UUID NOT NULL REFERENCES pallet_acabado(id_pallet),
     id_usuario_responsavel   INTEGER NOT NULL REFERENCES usuario(id_usuario),
-    data_hora                TIMESTAMP NOT NULL DEFAULT now(),
-    qtd_finalizados          INTEGER NOT NULL DEFAULT 0,
-    observacoes              VARCHAR(300)
+    PRIMARY KEY (id_pallet_encartuchado)
 );
+
+CREATE TABLE pallet_origem_encartuchado (
+    id_pallet_encartuchado   UUID NOT NULL REFERENCES pallet_acabado(id_pallet_qr),
+    id_pallet_origem         UUID NOT NULL REFERENCES pallet_acabado(id_pallet),
+    PRIMARY KEY (id_pallet_encartuchado)
+);
+
+
+
 
 CREATE INDEX idx_encart_pallet ON encartuchamento(id_pallet_qr);
 
