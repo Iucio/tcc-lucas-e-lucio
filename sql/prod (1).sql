@@ -176,7 +176,7 @@ CREATE TABLE pallet_final_encartuchado (
 CREATE TABLE pallet_origem_encartuchado (
     id_pallet_encartuchado   UUID NOT NULL REFERENCES pallet_acabado(id_pallet_qr),
     id_pallet_origem         UUID NOT NULL REFERENCES pallet_acabado(id_pallet),
-    PRIMARY KEY (id_pallet_encartuchado)
+    PRIMARY KEY (id_pallet_encartuchado, id_pallet_origem)
 );
 
 
