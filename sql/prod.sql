@@ -26,7 +26,7 @@ CREATE TABLE galpao (
 
 CREATE TABLE posicao_estoque (
     id_posicao      SERIAL PRIMARY KEY,
-    id_galpao       INTEGER NOT NULL REFERENCES galpao(id_galpao),
+    id_galpao       INTEGER NOT NULL REFERENCES galpao(id_galpao) ON DELETE CASCADE ON UPDATE CASCADE,
     nro_bloco       VARCHAR(20) NOT NULL,
     andar           VARCHAR(10) NOT NULL,
     nro_rua         VARCHAR(20) NOT NULL,
@@ -73,8 +73,8 @@ CREATE TABLE item_nfe (
 
 CREATE TABLE ordem_producao (
     id_op                    SERIAL PRIMARY KEY,
-    id_produto               INTEGER NOT NULL REFERENCES produto_produzido(id_produto),
-    id_usuario_responsavel   INTEGER NOT NULL REFERENCES usuario(id_usuario),
+    id_produto               INTEGER NOT NULL REFERENCES produto_produzido(id_produto) ON DELETE CASCADE ON UPDATE CASCADE,
+    id_usuario_responsavel   INTEGER NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE ON UPDATE CASCADE,
     status                   status_op NOT NULL DEFAULT 'planejada',
     total_kg                 NUMERIC(14,3),
     data_fabricacao          DATE,
@@ -86,14 +86,12 @@ CREATE TABLE ordem_producao (
     CONSTRAINT chk_op_periodo CHECK (fim IS NULL OR inicio IS NULL OR fim >= inicio)
 );
 
--- DEVERIA SER HASH
-CREATE INDEX idx_op_status ON ordem_producao(status);
--- DEVERIA SER HASH
-CREATE INDEX idx_op_produto ON ordem_producao(id_produto);
+CREATE INDEX idx_op_status  ON ordem_producao USING HASH (status);
+CREATE INDEX idx_op_produto ON ordem_producao USING HASH (id_produto);
 
 CREATE TABLE execucao_ordem_producao_insumo (
-    id_op            INTEGER NOT NULL REFERENCES ordem_producao(id_op) ON DELETE CASCADE,
-    id_insumos       INTEGER NOT NULL REFERENCES insumos(id_insumos),
+    id_op            INTEGER NOT NULL REFERENCES ordem_producao(id_op) ON DELETE CASCADE ON UPDATE CASCADE,
+    id_insumos       INTEGER NOT NULL REFERENCES insumos(id_insumos) ON DELETE CASCADE ON UPDATE CASCADE,
     qtd_consumidas   NUMERIC(14,4) NOT NULL DEFAULT 0,
     qtd_perdidas     NUMERIC(14,4) NOT NULL DEFAULT 0,
     PRIMARY KEY (id_op, id_insumos)
@@ -101,8 +99,8 @@ CREATE TABLE execucao_ordem_producao_insumo (
 
 
 CREATE TABLE execucao_ordem_producao_item_nfe (
-    id_op            INTEGER NOT NULL REFERENCES ordem_producao(id_op) ON DELETE CASCADE,
-    id_item_nfe      INTEGER NOT NULL REFERENCES item_nfe(id_item_nfe),
+    id_op            INTEGER NOT NULL REFERENCES ordem_producao(id_op) ON DELETE CASCADE ON UPDATE CASCADE,
+    id_item_nfe      INTEGER NOT NULL REFERENCES item_nfe(id_item_nfe) ON DELETE CASCADE ON UPDATE CASCADE,
     qtd_consumidos   NUMERIC(14,4) NOT NULL DEFAULT 0,
     qtd_perdidas     NUMERIC(14,4) NOT NULL DEFAULT 0,
     PRIMARY KEY (id_op, id_item_nfe)
@@ -111,8 +109,8 @@ CREATE TABLE execucao_ordem_producao_item_nfe (
 
 CREATE TABLE sessao (
     id_sessao                  SERIAL PRIMARY KEY,
-    id_op                      INTEGER NOT NULL REFERENCES ordem_producao(id_op),
-    id_usuario_operador        INTEGER NOT NULL REFERENCES usuario(id_usuario),
+    id_op                      INTEGER NOT NULL REFERENCES ordem_producao(id_op) ON DELETE CASCADE ON UPDATE CASCADE,
+    id_usuario_operador        INTEGER NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE ON UPDATE CASCADE,
     hora_programada_inicio     TIMESTAMP,
     hora_programada_fim        TIMESTAMP,
     hora_real_inicio           TIMESTAMP,
@@ -126,7 +124,7 @@ CREATE TABLE sessao (
 CREATE INDEX idx_sessao_op ON sessao(id_op);
 
 CREATE TABLE parada (
-    id_sessao           INTEGER NOT NULL REFERENCES sessao(id_sessao) ON DELETE CASCADE,
+    id_sessao           INTEGER NOT NULL REFERENCES sessao(id_sessao) ON DELETE CASCADE ON UPDATE CASCADE,
     nro_parada          INTEGER NOT NULL,
     ppm                 NUMERIC(10,2),
     tipo                VARCHAR(50),
@@ -141,9 +139,9 @@ CREATE TABLE parada (
 
 CREATE TABLE pallet_acabado (
     id_pallet                  UUID PRIMARY KEY,
-    id_sessao                  INTEGER NOT NULL REFERENCES sessao(id_sessao),
-    id_posicao_estoque         INTEGER REFERENCES posicao_estoque(id_posicao),
-    id_usuario_paletizador     INTEGER REFERENCES usuario(id_usuario),
+    id_sessao                  INTEGER NOT NULL REFERENCES sessao(id_sessao) ON DELETE CASCADE ON UPDATE CASCADE,
+    id_posicao_estoque         INTEGER REFERENCES posicao_estoque(id_posicao) ON DELETE CASCADE ON UPDATE CASCADE,
+    id_usuario_paletizador     INTEGER REFERENCES usuario(id_usuario) ON DELETE CASCADE ON UPDATE CASCADE,
     etiqueta_qr                VARCHAR(80) UNIQUE,
     status                     status_pallet NOT NULL DEFAULT 'em_espera',
     total_kg                   NUMERIC(14,3) NOT NULL DEFAULT 0,
@@ -158,7 +156,7 @@ CREATE TABLE pallet_acabado (
 CREATE INDEX idx_pallet_sessao ON pallet_acabado(id_sessao);
 
 CREATE TABLE pallet_parcial_acabado (
-    id_pallet           UUID NOT NULL REFERENCES pallet_acabado(id_pallet_qr) ON DELETE CASCADE,
+    id_pallet           UUID NOT NULL REFERENCES pallet_acabado(id_pallet) ON DELETE CASCADE ON UPDATE CASCADE,
     nro                 INTEGER NOT NULL,
     total_kg            NUMERIC(14,3) NOT NULL DEFAULT 0,
     data_inspecao       TIMESTAMP,
@@ -168,21 +166,21 @@ CREATE TABLE pallet_parcial_acabado (
 
 
 CREATE TABLE pallet_final_encartuchado (
-    id_pallet_encartuchado   UUID NOT NULL REFERENCES pallet_acabado(id_pallet),
-    id_usuario_responsavel   INTEGER NOT NULL REFERENCES usuario(id_usuario),
+    id_pallet_encartuchado   UUID NOT NULL REFERENCES pallet_acabado(id_pallet) ON DELETE CASCADE ON UPDATE CASCADE,
+    id_usuario_responsavel   INTEGER NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE ON UPDATE CASCADE,
     PRIMARY KEY (id_pallet_encartuchado)
 );
 
 CREATE TABLE pallet_origem_encartuchado (
-    id_pallet_encartuchado   UUID NOT NULL REFERENCES pallet_acabado(id_pallet_qr),
-    id_pallet_origem         UUID NOT NULL REFERENCES pallet_acabado(id_pallet),
+    id_pallet_encartuchado   UUID NOT NULL REFERENCES pallet_acabado(id_pallet) ON DELETE CASCADE ON UPDATE CASCADE,
+    id_pallet_origem         UUID NOT NULL REFERENCES pallet_acabado(id_pallet) ON DELETE CASCADE ON UPDATE CASCADE,
     PRIMARY KEY (id_pallet_encartuchado, id_pallet_origem)
 );
 
 
 
 
-CREATE INDEX idx_encart_pallet ON encartuchamento(id_pallet_qr);
+-- Index removed: table encartuchamento does not exist in this schema.
 
 COMMIT;
 
