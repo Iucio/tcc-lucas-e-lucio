@@ -391,7 +391,8 @@ CREATE TABLE matinal_operacional.analise_recebimento (
     PRIMARY KEY (
         id_fabricante,
         nro_laudo,
-        nro_lote
+        nro_lote,
+        data_analise
     ),
 
     CONSTRAINT fk_ar_lote
@@ -420,6 +421,7 @@ CREATE TABLE matinal_operacional.analise_leite (
     id_fabricante UUID    NOT NULL,
     nro_laudo     INTEGER NOT NULL,
     nro_lote      UUID    NOT NULL,
+    data_analise  DATE    NOT NULL,
 
     umidade              NUMERIC(10,4),
     molhabilidade        NUMERIC(10,4),
@@ -431,19 +433,22 @@ CREATE TABLE matinal_operacional.analise_leite (
     PRIMARY KEY (
         id_fabricante,
         nro_laudo,
-        nro_lote
+        nro_lote,
+        data_analise
     ),
 
     CONSTRAINT fk_al_analise
         FOREIGN KEY (
             id_fabricante,
             nro_laudo,
-            nro_lote
+            nro_lote,
+            data_analise
         )
         REFERENCES matinal_operacional.analise_recebimento(
             id_fabricante,
             nro_laudo,
-            nro_lote
+            nro_lote,
+            data_analise
         )
         ON DELETE CASCADE
         ON UPDATE CASCADE
@@ -454,6 +459,7 @@ CREATE TABLE matinal_operacional.analise_embalagem (
     id_fabricante UUID    NOT NULL,
     nro_laudo     INTEGER NOT NULL,
     nro_lote      UUID    NOT NULL,
+    data_analise  DATE    NOT NULL,
 
     peso_aferido NUMERIC(10,4),
 
@@ -462,19 +468,22 @@ CREATE TABLE matinal_operacional.analise_embalagem (
     PRIMARY KEY (
         id_fabricante,
         nro_laudo,
-        nro_lote
+        nro_lote,
+        data_analise
     ),
 
     CONSTRAINT fk_ae_analise
         FOREIGN KEY (
             id_fabricante,
             nro_laudo,
-            nro_lote
+            nro_lote,
+            data_analise
         )
         REFERENCES matinal_operacional.analise_recebimento(
             id_fabricante,
             nro_laudo,
-            nro_lote
+            nro_lote,
+            data_analise
         )
         ON DELETE CASCADE
         ON UPDATE CASCADE
