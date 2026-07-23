@@ -10,7 +10,7 @@ CREATE TYPE matinal_operacional.perfil_usuario AS ENUM ('ADMIN', 'SUPERVISOR', '
 CREATE TYPE matinal_operacional.status_op      AS ENUM ('PLANEJADA', 'EM_PRODUCAO', 'PAUSADA', 'FINALIZADA', 'CANCELADA');
 CREATE TYPE matinal_operacional.status_pallet  AS ENUM ('EM_ESPERA', 'PARCIAL', 'FINALIZADO');
 CREATE TYPE matinal_operacional.status_nf      AS ENUM ('PENDENTE', 'APROVADO', 'REPROVADO');
-
+CREATE TYPE matinal_operacional.resultado_analise AS ENUM ('APROVADO', 'REPROVADO');
 
 -- ============================================================
 -- LEVEL 0 — no dependencies
@@ -374,6 +374,110 @@ CREATE TABLE matinal_operacional.pallet_acabado (
     data_hr_conf           TIMESTAMP,
     data_inspecao          TIMESTAMP,
     total_kg_parcial       NUMERIC(14,3) NOT NULL DEFAULT 0
+);
+
+CREATE TABLE matinal_operacional.analise_recebimento (
+
+    id_fabricante UUID    NOT NULL,
+    nro_laudo     INTEGER NOT NULL,
+    nro_lote      UUID    NOT NULL,
+
+    id_usuario    UUID    NOT NULL,
+
+    data_analise  DATE NOT NULL,
+
+    resultado_geral matinal_operacional.resultado_analise NOT NULL,
+
+    PRIMARY KEY (
+        id_fabricante,
+        nro_laudo,
+        nro_lote
+    ),
+
+    CONSTRAINT fk_ar_lote
+        FOREIGN KEY (
+            id_fabricante,
+            nro_laudo,
+            nro_lote
+        )
+        REFERENCES matinal_operacional.lote(
+            id_fabricante,
+            nro_laudo,
+            nro_lote
+        )
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_ar_usuario
+        FOREIGN KEY (id_usuario)
+        REFERENCES matinal_operacional.usuario(id_usuario)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+);
+
+CREATE TABLE matinal_operacional.analise_leite (
+
+    id_fabricante UUID    NOT NULL,
+    nro_laudo     INTEGER NOT NULL,
+    nro_lote      UUID    NOT NULL,
+
+    umidade              NUMERIC(10,4),
+    molhabilidade        NUMERIC(10,4),
+    materia_gorda        NUMERIC(10,4),
+    acidez_titulavel     NUMERIC(10,4),
+    particula_queimada   BOOLEAN,
+    residuo_antibiotico  BOOLEAN,
+
+    PRIMARY KEY (
+        id_fabricante,
+        nro_laudo,
+        nro_lote
+    ),
+
+    CONSTRAINT fk_al_analise
+        FOREIGN KEY (
+            id_fabricante,
+            nro_laudo,
+            nro_lote
+        )
+        REFERENCES matinal_operacional.analise_recebimento(
+            id_fabricante,
+            nro_laudo,
+            nro_lote
+        )
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+);
+
+CREATE TABLE matinal_operacional.analise_embalagem (
+
+    id_fabricante UUID    NOT NULL,
+    nro_laudo     INTEGER NOT NULL,
+    nro_lote      UUID    NOT NULL,
+
+    peso_aferido NUMERIC(10,4),
+
+    conferencia_layout BOOLEAN,
+
+    PRIMARY KEY (
+        id_fabricante,
+        nro_laudo,
+        nro_lote
+    ),
+
+    CONSTRAINT fk_ae_analise
+        FOREIGN KEY (
+            id_fabricante,
+            nro_laudo,
+            nro_lote
+        )
+        REFERENCES matinal_operacional.analise_recebimento(
+            id_fabricante,
+            nro_laudo,
+            nro_lote
+        )
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 
 
